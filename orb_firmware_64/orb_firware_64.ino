@@ -1,22 +1,21 @@
 /**
- * \file MP3Shield_Library_Demo.ino
+ * The Orb Firmware
  *
- * \brief Example sketch of using the MP3Shield Arduino driver
- * \remarks comments are implemented with Doxygen Markdown format
+ * An accelerometer controlled mp3 library for use in the orb sculpture
+ * 
+ * Authors: Mikhail Manison / Stephan Moore
  *
- * \author Bill Porter
- * \author Michael P. Flaga
  *
- * This sketch listens for commands from a serial terminal (like the Serial
- * Monitor in the Arduino IDE). If it sees 1-9 it will try to play an MP3 file
- * named track00x.mp3 where x is a number from 1 to 9. For eaxmple, pressing
- * 2 will play 'track002.mp3'. A lowe case 's' will stop playing the mp3.
- * 'f' will play an MP3 by calling it by it's filename as opposed to a track
- * number.
  *
- * Sketch assumes you have MP3 files with filenames like "track001.mp3",
- * "track002.mp3", etc on an SD card loaded into the shield.
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2013, mikhail mansion / stephan moore
+ * 
  */
+
+
+/* Library Includes
+  ------------------------------------------------------------*/
 
 #include <SPI.h>
 
