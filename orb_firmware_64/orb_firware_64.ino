@@ -28,6 +28,7 @@ boolean debug = true; //toggle to disable debug mode (prints serial info)
 #include <SFEMP3Shield.h>   //mp3 shield libary
 
 
+
 /* VARIABLE / OBJECT INSTANTIATION
   ------------------------------------------------------------*/
 SdFat sd;
@@ -167,30 +168,51 @@ void setup() {
 void loop() {
 
 
-  Serial.print(F("Y => "));
-  Serial.print(analogRead(ypin));
+  //Serial.print(F("Y => "));
+  //Serial.print(analogRead(ypin));
   // print a tab between values:
   //Serial.print("\t");
   //Serial.print(analogRead(zpin));
-  Serial.println();
+  //Serial.println();
   // delay before next reading:
   delay(100);
+
+  int num = 9;
+
+ 
 
 }
 
 void playTrack(int trackNo) {
 
-  if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
+  // if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
 
-    MP3player.stopTrack();
+  //   MP3player.stopTrack();
 
-    currentTrack = trackNo; //set current track no
+  //   currentTrack = trackNo; //set current track no
 
-    //create a string with the filename
-    //char trackName[] = t.mp3";
+  //   //create a string with the filename
+  //   //char trackName[] = t.mp3";
+
+  // }
+
+}
+
+String getTrackName(int trackNo) { //get track file names from track number
+
+  String trackName = "";
+
+   if(trackNo < 10) { //pad with 2 digits
+    
+    trackName += "00" + String(trackNo) + ".mp3";
+
+  } else if(trackNo < 100) { //pad with 1 digit
+
+    trackName += "0" + String(trackNo) + ".mp3";
 
   }
 
+  return trackName;
 }
 
 //------------------------------------------------------------------------------
