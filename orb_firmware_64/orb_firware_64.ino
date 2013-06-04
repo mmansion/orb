@@ -53,6 +53,73 @@ boolean positionTimerMode = false;  //TODO: use timers for additional playback o
   ----------------------------------------------------------*/
 int currentTrack = 0;
 
+char tracks[64] = {
+  '001.mp3',
+  '002.mp3',
+  '003.mp3',
+  '004.mp3',
+  '005.mp3',
+  '006.mp3',
+  '007.mp3',
+  '008.mp3',
+  '009.mp3',
+  '010.mp3',
+  '011.mp3',
+  '012.mp3',
+  '013.mp3',
+  '014.mp3',
+  '015.mp3',
+  '016.mp3',
+  '017.mp3',
+  '018.mp3',
+  '019.mp3',
+  '020.mp3',
+  '021.mp3',
+  '022.mp3',
+  '023.mp3',
+  '024.mp3',
+  '025.mp3',
+  '026.mp3',
+  '027.mp3',
+  '028.mp3',
+  '029.mp3',
+  '030.mp3',
+  '031.mp3',
+  '032.mp3',
+  '033.mp3',
+  '034.mp3',
+  '035.mp3',
+  '036.mp3',
+  '037.mp3',
+  '038.mp3',
+  '039.mp3',
+  '040.mp3',
+  '041.mp3',
+  '042.mp3',
+  '043.mp3',
+  '044.mp3',
+  '045.mp3',
+  '046.mp3',
+  '047.mp3',
+  '048.mp3',
+  '049.mp3',
+  '050.mp3',
+  '051.mp3',
+  '052.mp3',
+  '053.mp3',
+  '054.mp3',
+  '055.mp3',
+  '056.mp3',
+  '057.mp3',
+  '058.mp3',
+  '059.mp3',
+  '060.mp3',
+  '061.mp3',
+  '062.mp3',
+  '063.mp3',
+  '064.mp3'
+};
+
 
 /* MAIN SETUP
   ----------------------------------------------------------*/
@@ -113,11 +180,14 @@ void loop() {
 
 void playTrack(int trackNo) {
 
-  if(trackNo !== currentTrack) { //prevent stop/start of same track repeatedly
+  if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
 
     MP3player.stopTrack();
 
     currentTrack = trackNo; //set current track no
+
+    //create a string with the filename
+    //char trackName[] = t.mp3";
 
   }
 
