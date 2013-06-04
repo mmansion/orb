@@ -6,74 +6,56 @@
  * Authors: Mikhail Manison / Stephan Moore
  *
  *
- *
  * The MIT License (MIT)
  *
  * Copyright (c) 2013, mikhail mansion / stephan moore
  * 
  */
 
-
-/* Library Includes
+/* DEBUG
   ------------------------------------------------------------*/
+// NOTE: using serial monitor in sbl wasn't working in ubuntu without changing permissions
+// $ sudo chown mmansion /dev/ttyACM0
+// $ dmesg
+boolean debug = true; //toggle to disable debug mode (prints serial info)
 
-#include <SPI.h>
 
-//Add the SdFat Libraries
-#include <SdFat.h>
+/* LIBRARIES
+  ------------------------------------------------------------*/
+#include <SPI.h>            //SPI protocol communication
+#include <SdFat.h>          //SdFat libs for micro SD card communication
 #include <SdFatUtil.h>
+#include <SFEMP3Shield.h>   //mp3 shield libary
 
-//and the MP3 Shield Library
-#include <SFEMP3Shield.h>
 
-// Below is not needed if interrupt driven. Safe to remove if not using.
-#if defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_Timer1
-  #include <TimerOne.h>
-#elif defined(USE_MP3_REFILL_MEANS) && USE_MP3_REFILL_MEANS == USE_MP3_SimpleTimer
-  #include <SimpleTimer.h>
-#endif
-
-/**
- * \brief Object instancing the SdFat library.
- *
- * principal object for handling all SdCard functions.
- */
+/* VARIABLE / OBJECT INSTANTIATION
+  ------------------------------------------------------------*/
 SdFat sd;
-
-/**
- * \brief Object instancing the SFEMP3Shield library.
- *
- * principal object for handling all the attributes, members and functions for the library.
- */
 SFEMP3Shield MP3player;
-
-//------------------------------------------------------------------------------
-/**
- * \brief Setup the Arduino Chip's feature for our use.
- *
- * After Arduino's kernel has booted initialize basic features for this
- * application, such as Serial port and MP3player objects with .begin.
- * Along with displaying the Help Menu.
- *
- * \note returned Error codes are typically passed up from MP3player.
- * Whicn in turns creates and initializes the SdCard objects.
- *
- * \see
- * \ref Error_Codes
- */
-
 
 
 /* ACCELEROMETER PINS
-   ----------------------------------------------------------*/
-const int groundpin = 18;             // analog input pin 4 -- ground
-const int powerpin = 19;              // analog input pin 5 -- voltage
-const int xpin = A3;                  // x-axis of the accelerometer
-const int ypin = A2;                  // y-axis
-const int zpin = A1;                  // z-axis (only on 3-axis models)
+  ----------------------------------------------------------*/
+const int groundpin = 18; // analog input pin 4 -- ground
+const int powerpin  = 19; // analog input pin 5 -- voltage
+const int xpin = A3;      // x-axis of the accelerometer
+const int ypin = A2;      // y-axis
+const int zpin = A1;      // z-axis (only on 3-axis models)
 
 
+/* ORB MODES
+  ----------------------------------------------------------*/
+boolean interruptMode     = true;   //allow for interruption of currently playing track
+boolean loopTrackMode     = true;
+boolean positionTimerMode = false;  //TODO: use timers for additional playback options
 
+/* APP STATES (FLAGS)
+  ----------------------------------------------------------*/
+int currentTrack = 0;
+
+
+/* MAIN SETUP
+  ----------------------------------------------------------*/
 void setup() {
 
   uint8_t result; //result code from some function as to be tested at later time.
@@ -84,13 +66,13 @@ void setup() {
   Serial.print(FreeRam(), DEC);  // FreeRam() is provided by SdFatUtil.h
   Serial.println(F(" Should be a base line of 1040, on ATmega328 when using INTx"));
 
-
   //Initialize the SdCard.
   if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
   if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
   //Initialize the MP3 Player Shield
   result = MP3player.begin();
+
   //check result, see readme for error codes.
   if(result != 0) {
     Serial.print(F("Error code: "));
@@ -102,65 +84,22 @@ void setup() {
     }
   }
 
-#if (0)
-  // Typically not used by most shields, hence commented out.
-  Serial.println(F("Applying ADMixer patch."));
-  if(MP3player.ADMixerLoad("admxster.053") == 0) {
-    Serial.println(F("Setting ADMixer Volume."));
-    MP3player.ADMixerVol(-3);
-  }
-#endif
+  //configure mp3 shield
+  MP3player.setMonoMode(1); // 0 = stereo / 1 = mono  (note: leave in mono for orb)
 
-  help();
-
-  // Provide ground and power by using the analog inputs as normal
-  // digital pins.  This makes it possible to directly connect the
-  // breakout board to the Arduino.  If you use the normal 5V and
-  // GND pins on the Arduino, you can remove these lines.
+  //setup pins for accelerometer
   pinMode(groundpin, OUTPUT);
   pinMode(powerpin, OUTPUT);
   digitalWrite(groundpin, LOW); 
   digitalWrite(powerpin, HIGH);
 }
 
-//------------------------------------------------------------------------------
-/**
- * \brief Main Loop the Arduino Chip
- *
- * This is called at the end of Arduino kernel's main loop before recycling.
- * And is where the user's serial input of bytes are read and analyzed by
- * parsed_menu.
- *
- * Additionally, if the means of refilling is not interrupt based then the
- * MP3player object is serviced with the availaible function.
- *
- * \note Actual examples of the libraries public functions are implemented in
- * the parse_menu() function.
- */
-
-boolean playing2 = false;
-boolean playing3 = false;
+/* MAIN LOOP
+  ----------------------------------------------------------*/
 
 void loop() {
 
-// Below is only needed if not interrupt driven. Safe to remove if not using.
-// #if defined(USE_MP3_REFILL_MEANS) \
-//     && ( (USE_MP3_REFILL_MEANS == USE_MP3_SimpleTimer) \
-//     ||   (USE_MP3_REFILL_MEANS == USE_MP3_Polled)      )
 
-//   MP3player.available();
-// #endif
-
-//   if(Serial.available()) {
-//     parse_menu(Serial.read()); // get command from serial input
-//   }
-
-//   delay(100);
-
- // print the sensor values:
-  //Serial.print(analogRead(xpin));
-  // print a tab between values:
-  //Serial.print("\t");
   Serial.print(F("Y => "));
   Serial.print(analogRead(ypin));
   // print a tab between values:
@@ -170,30 +109,19 @@ void loop() {
   // delay before next reading:
   delay(100);
 
-
-
-  if(analogRead(ypin) < 500 ) {
-    if(!playing2) {
-      Serial.println(F("Playing Track 2"));
-      MP3player.stopTrack();
-      MP3player.playMP3("track002.mp3", 0);
-    }
-    playing2 = true;
-    playing3 = false;
-  }
-  if(analogRead(ypin) > 550 ) {
-    if(!playing3) {
-      Serial.println(F("Playing Track 3"));
-      MP3player.stopTrack();
-      MP3player.playMP3("track003.mp3", 0);
-    }
-    
-    playing2 = false;
-    playing3 = true;
-  }
 }
 
+void playTrack(int trackNo) {
 
+  if(trackNo !== currentTrack) { //prevent stop/start of same track repeatedly
+
+    MP3player.stopTrack();
+
+    currentTrack = trackNo; //set current track no
+
+  }
+
+}
 
 //------------------------------------------------------------------------------
 /**
