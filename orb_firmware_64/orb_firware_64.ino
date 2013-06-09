@@ -46,7 +46,7 @@ const int zpin = A1;      // z-axis (only on 3-axis models)
 
 /* CALIBRATION VARS
   ----------------------------------------------------------*/
-boolean calibrateX = true;
+boolean calibrateX = false;
 boolean calibrateY = false;
 boolean calibrateZ = false;
 int xHigh = 0;
@@ -55,6 +55,23 @@ int yHigh = 0;
 int yLow  = 1023;
 int zHigh = 0;
 int zLow  = 1023;
+
+  /* MAPPED VARS (set after calibrating)
+  ----------------------------------------------------------*/
+int xInHigh  = 0;
+int xInLow   = 0;
+int xOutHigh = 0;
+int xOutLow  = 0;
+
+int yInHigh  = 0;
+int yInLow   = 0;
+int yOutHigh = 0;
+int yOutLow  = 0;
+
+int zInHigh  = 0;
+int zInLow   = 0;
+int zOutHigh = 0;
+int zOutLow  = 0;
 
 
 /* ORB MODES
@@ -66,75 +83,6 @@ boolean positionTimerMode = false;  //TODO: use timers for additional playback o
 /* APP STATES (FLAGS)
   ----------------------------------------------------------*/
 int currentTrack = 0;
-
-//USE getTrackName() instead of direct array lookup
-// char tracks[64] = {
-//   '001.mp3',
-//   '002.mp3',
-//   '003.mp3',
-//   '004.mp3',
-//   '005.mp3',
-//   '006.mp3',
-//   '007.mp3',
-//   '008.mp3',
-//   '009.mp3',
-//   '010.mp3',
-//   '011.mp3',
-//   '012.mp3',
-//   '013.mp3',
-//   '014.mp3',
-//   '015.mp3',
-//   '016.mp3',
-//   '017.mp3',
-//   '018.mp3',
-//   '019.mp3',
-//   '020.mp3',
-//   '021.mp3',
-//   '022.mp3',
-//   '023.mp3',
-//   '024.mp3',
-//   '025.mp3',
-//   '026.mp3',
-//   '027.mp3',
-//   '028.mp3',
-//   '029.mp3',
-//   '030.mp3',
-//   '031.mp3',
-//   '032.mp3',
-//   '033.mp3',
-//   '034.mp3',
-//   '035.mp3',
-//   '036.mp3',
-//   '037.mp3',
-//   '038.mp3',
-//   '039.mp3',
-//   '040.mp3',
-//   '041.mp3',
-//   '042.mp3',
-//   '043.mp3',
-//   '044.mp3',
-//   '045.mp3',
-//   '046.mp3',
-//   '047.mp3',
-//   '048.mp3',
-//   '049.mp3',
-//   '050.mp3',
-//   '051.mp3',
-//   '052.mp3',
-//   '053.mp3',
-//   '054.mp3',
-//   '055.mp3',
-//   '056.mp3',
-//   '057.mp3',
-//   '058.mp3',
-//   '059.mp3',
-//   '060.mp3',
-//   '061.mp3',
-//   '062.mp3',
-//   '063.mp3',
-//   '064.mp3'
-// };
-
 
 /* MAIN SETUP
   ----------------------------------------------------------*/
@@ -167,13 +115,14 @@ void setup() {
   }
 
   //configure mp3 shield
-  MP3player.setMonoMode(1); // 0 = stereo / 1 = mono  (note: leave in mono for orb)
+  //MP3player.setMonoMode(1); // 0 = stereo / 1 = mono  (note: leave in mono for orb)
 
   //setup pins for accelerometer
   pinMode(groundpin, OUTPUT);
   pinMode(powerpin, OUTPUT);
   digitalWrite(groundpin, LOW); 
   digitalWrite(powerpin, HIGH);
+
 }
 
 /* MAIN LOOP
@@ -184,30 +133,32 @@ void loop() {
   if(calibrateX || calibrateY || calibrateZ) {
     calibrate();
   } else {
-    //continue normal operation
+    playTrack(getTrackNumber());
   }
-
   delay(100); //adc recover
 }
 
 void playTrack(int trackNo) {
 
-  // if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
+   if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
 
-  //   MP3player.stopTrack();
+    MP3player.stopTrack();
 
-  //   currentTrack = trackNo; //set current track no
+    currentTrack = trackNo; //set current track no
 
-  //   //create a string with the filename
-  //   //char trackName[] = t.mp3";
+    MP3player.playMP3(getTrackName(trackNo), 0);
 
-  // }
+    Serial.print(F("playing track"));
+    Serial.println(getTrackName(trackNo));
+
+  }
 
 }
 
-String getTrackName(int trackNo) { //get track file names from track number
+char* getTrackName(int trackNo) { //get track file names from track number
 
   String trackName = "";
+  char name[16] = "";
 
    if(trackNo < 10) { //pad with 2 digits
     
@@ -219,22 +170,56 @@ String getTrackName(int trackNo) { //get track file names from track number
 
   }
 
-  return trackName;
+  trackName.toCharArray(name, 16);
+  return name;
 }
 
 int getTrackNumber() {
 
-  //Serial.print(F("Y => "));
-  //Serial.print(analogRead(ypin));
-  // print a tab between values:
-  //Serial.print("\t");
-  //Serial.print(analogRead(zpin));
-  //Serial.println();
-  // delay before next reading:
+  int p = 0;
+
+  //X Value
   int x = analogRead(xpin);
+
+  if(x <= 440) {
+    p=0;
+  } else if(x > 440 && x <= 520) {
+    p=1;
+  } else if(x > 520 && x <= 595) {
+    p=2;
+  } else {
+    p=3;
+  }
+
+  //Y Value
   int y = analogRead(ypin);
+
+  if(y <= 435) {
+    p=p+0;
+  } else if(y > 435 && y <= 520) {
+    p=p+4;
+  } else if(y > 520 && y <= 605) {
+    p=p+8;
+  } else {
+    p=p+12;
+  }
+
+    //Z Value
   int z = analogRead(zpin);
 
+  if(z <= 420) {
+    p=p+0;
+  } else if(z > 420 && z <= 488) {
+    p=p+16;
+  } else if(z > 488 && z <= 558) {
+    p=p+32;
+  } else {
+    p=p+48;
+  }
+
+p=p+1;  // output range is now 1-64! Kickass.
+
+  return p;
 
 }
 
@@ -248,6 +233,8 @@ void calibrate() {
     
     int x = analogRead(xpin);
 
+    delay(100);
+
     if(x > xHigh) {
       xHigh = x;
     }
@@ -259,11 +246,15 @@ void calibrate() {
     Serial.print(xLow);
     Serial.print(F("\t Highest X => "));
     Serial.print(xHigh);
+    Serial.print(F("\t Acctual X => "));
+    Serial.print(analogRead(xpin));
     Serial.println("");
 
   } else if (calibrateY) {
     
     int y = analogRead(ypin);
+
+    delay(100);
 
     if(y > yHigh) {
       yHigh = y;
@@ -276,11 +267,15 @@ void calibrate() {
     Serial.print(yLow);
     Serial.print(F("\t Highest Y => "));
     Serial.print(yHigh);
+    Serial.print(F("\t Acctual Y => "));
+    Serial.print(analogRead(ypin));
     Serial.println("");
 
   } else if (calibrateZ) {
 
     int z = analogRead(zpin);
+
+    delay(100);
 
     if(z > zHigh) {
       zHigh = z;
@@ -293,6 +288,8 @@ void calibrate() {
     Serial.print(zLow);
     Serial.print(F("\t Highest Z => "));
     Serial.print(zHigh);
+    Serial.print(F("\t Acctual Z => "));
+    Serial.print(analogRead(zpin));
     Serial.println("");
   }
 }
