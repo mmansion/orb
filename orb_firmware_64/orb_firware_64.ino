@@ -44,6 +44,19 @@ const int ypin = A2;      // y-axis
 const int zpin = A1;      // z-axis (only on 3-axis models)
 
 
+/* CALIBRATION VARS
+  ----------------------------------------------------------*/
+boolean calibrateX = true;
+boolean calibrateY = false;
+boolean calibrateZ = false;
+int xHigh = 0;
+int xLow  = 1023;
+int yHigh = 0;
+int yLow  = 1023;
+int zHigh = 0;
+int zLow  = 1023;
+
+
 /* ORB MODES
   ----------------------------------------------------------*/
 boolean interruptMode     = true;   //allow for interruption of currently playing track
@@ -168,20 +181,13 @@ void setup() {
 
 void loop() {
 
+  if(calibrateX || calibrateY || calibrateZ) {
+    calibrate();
+  } else {
+    //continue normal operation
+  }
 
-  //Serial.print(F("Y => "));
-  //Serial.print(analogRead(ypin));
-  // print a tab between values:
-  //Serial.print("\t");
-  //Serial.print(analogRead(zpin));
-  //Serial.println();
-  // delay before next reading:
-  delay(100);
-
-  int num = 9;
-
- 
-
+  delay(100); //adc recover
 }
 
 void playTrack(int trackNo) {
@@ -214,6 +220,81 @@ String getTrackName(int trackNo) { //get track file names from track number
   }
 
   return trackName;
+}
+
+int getTrackNumber() {
+
+  //Serial.print(F("Y => "));
+  //Serial.print(analogRead(ypin));
+  // print a tab between values:
+  //Serial.print("\t");
+  //Serial.print(analogRead(zpin));
+  //Serial.println();
+  // delay before next reading:
+  int x = analogRead(xpin);
+  int y = analogRead(ypin);
+  int z = analogRead(zpin);
+
+
+}
+
+
+/* MAIN LOOP
+  ----------------------------------------------------------*/
+
+void calibrate() {
+
+  if(calibrateX) {
+    
+    int x = analogRead(xpin);
+
+    if(x > xHigh) {
+      xHigh = x;
+    }
+    if(x < xLow) {
+      xLow = x;
+    }
+
+    Serial.print(F("Lowest X => "));
+    Serial.print(xLow);
+    Serial.print(F("\t Highest X => "));
+    Serial.print(xHigh);
+    Serial.println("");
+
+  } else if (calibrateY) {
+    
+    int y = analogRead(ypin);
+
+    if(y > yHigh) {
+      yHigh = y;
+    }
+    if(y < yLow) {
+      yLow = y;
+    }
+
+    Serial.print(F("Lowest Y => "));
+    Serial.print(yLow);
+    Serial.print(F("\t Highest Y => "));
+    Serial.print(yHigh);
+    Serial.println("");
+
+  } else if (calibrateZ) {
+
+    int z = analogRead(zpin);
+
+    if(z > zHigh) {
+      zHigh = z;
+    }
+    if(z < zLow) {
+      zLow = z;
+    }
+
+    Serial.print(F("Lowest Z => "));
+    Serial.print(zLow);
+    Serial.print(F("\t Highest Z => "));
+    Serial.print(zHigh);
+    Serial.println("");
+  }
 }
 
 //------------------------------------------------------------------------------
