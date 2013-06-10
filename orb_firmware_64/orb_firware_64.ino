@@ -96,13 +96,13 @@ void setup() {
   Serial.print(FreeRam(), DEC);  // FreeRam() is provided by SdFatUtil.h
   Serial.println(F(" Should be a base line of 1040, on ATmega328 when using INTx"));
 
+
   //Initialize the SdCard.
   if(!sd.begin(SD_SEL, SPI_HALF_SPEED)) sd.initErrorHalt();
   if(!sd.chdir("/")) sd.errorHalt("sd.chdir");
 
   //Initialize the MP3 Player Shield
   result = MP3player.begin();
-
   //check result, see readme for error codes.
   if(result != 0) {
     Serial.print(F("Error code: "));
@@ -113,6 +113,17 @@ void setup() {
       Serial.println(F("Use the \"d\" command to verify SdCard can be read")); // can be removed for space, if needed.
     }
   }
+
+#if (0)
+  // Typically not used by most shields, hence commented out.
+  Serial.println(F("Applying ADMixer patch."));
+  if(MP3player.ADMixerLoad("admxster.053") == 0) {
+    Serial.println(F("Setting ADMixer Volume."));
+    MP3player.ADMixerVol(-3);
+  }
+#endif
+
+  help();
 
   //configure mp3 shield
   //MP3player.setMonoMode(1); // 0 = stereo / 1 = mono  (note: leave in mono for orb)
@@ -139,6 +150,8 @@ void loop() {
 }
 
 void playTrack(int trackNo) {
+  
+  char name[16] = "";
 
    if(trackNo != currentTrack) { //prevent stop/start of same track repeatedly
 
@@ -146,19 +159,25 @@ void playTrack(int trackNo) {
 
     currentTrack = trackNo; //set current track no
 
-    MP3player.playMP3(getTrackName(trackNo), 0);
+    getTrackName(trackNo).toCharArray(name, 16);
 
-    Serial.print(F("playing track"));
+    MP3player.playMP3(name, 0);
+
+    //char* name[16];
+
+    //trackName.toCharArray(name, 16);
+
+    //name = getTrackName(trackNo);
+
     Serial.println(getTrackName(trackNo));
 
   }
 
 }
 
-char* getTrackName(int trackNo) { //get track file names from track number
+String getTrackName(int trackNo) { //get track file names from track number
 
   String trackName = "";
-  char name[16] = "";
 
    if(trackNo < 10) { //pad with 2 digits
     
@@ -170,8 +189,7 @@ char* getTrackName(int trackNo) { //get track file names from track number
 
   }
 
-  trackName.toCharArray(name, 16);
-  return name;
+  return trackName;
 }
 
 int getTrackNumber() {
