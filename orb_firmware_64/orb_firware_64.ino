@@ -56,23 +56,6 @@ int yLow  = 1023;
 int zHigh = 0;
 int zLow  = 1023;
 
-  /* MAPPED VARS (set after calibrating)
-  ----------------------------------------------------------*/
-int xInHigh  = 0;
-int xInLow   = 0;
-int xOutHigh = 0;
-int xOutLow  = 0;
-
-int yInHigh  = 0;
-int yInLow   = 0;
-int yOutHigh = 0;
-int yOutLow  = 0;
-
-int zInHigh  = 0;
-int zInLow   = 0;
-int zOutHigh = 0;
-int zOutLow  = 0;
-
 
 /* ORB MODES
   ----------------------------------------------------------*/
@@ -147,6 +130,41 @@ void loop() {
     playTrack(getTrackNumber());
   }
   delay(100); //adc recover
+}
+
+void getPitchAndRoll() {
+  
+  //note: roll becomes unreliable when pitch is within 5deg of zenith
+  
+  //get raw accelerometer reading
+  int xRaw = ReadAxis(xInput);
+  int yRaw = ReadAxis(yInput);
+  int zRaw = ReadAxis(zInput);
+
+  //convert raw values to 'milli-Gs"
+  long xScaled = map(xRaw, xRawMin, xRawMax, -1000, 1000);
+  long yScaled = map(yRaw, yRawMin, yRawMax, -1000, 1000);
+  long zScaled = map(zRaw, zRawMin, zRawMax, -1000, 1000);
+
+  // re-scale to fractional Gs
+  float Xg = xScaled / 1000.0;
+  float Yg = yScaled / 1000.0;
+  float Zg = zScaled / 1000.0;
+ 
+  //Low Pass Filter
+  double fXg = Xg * alpha + (fXg * (1.0 - alpha));
+  double fYg = Yg * alpha + (fYg * (1.0 - alpha));
+  double fZg = Zg * alpha + (fZg * (1.0 - alpha));
+ 
+  //Roll & Pitch Equations
+  double roll  = (atan2(-fYg, fZg)*180.0)/M_PI;
+  double pitch = (atan2(fXg, sqrt(fYg*fYg + fZg*fZg))*180.0)/M_PI;
+
+  Serial.print(pitch);
+  Serial.print(":");
+  Serial.println(roll);
+
+  delay(10);
 }
 
 void playTrack(int trackNo) {
