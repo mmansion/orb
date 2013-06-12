@@ -28,21 +28,31 @@ boolean debug = true; //toggle to disable debug mode (prints serial info)
 #include <SFEMP3Shield.h>   //mp3 shield libary
 
 
-
 /* VARIABLE / OBJECT INSTANTIATION
   ------------------------------------------------------------*/
 SdFat sd;
 SFEMP3Shield MP3player;
 
-
 /* ACCELEROMETER PINS
   ----------------------------------------------------------*/
-const int groundpin = 18; // analog input pin 4 -- ground
-const int powerpin  = 19; // analog input pin 5 -- voltage
-const int xpin = A3;      // x-axis of the accelerometer
-const int ypin = A2;      // y-axis
-const int zpin = A1;      // z-axis (only on 3-axis models)
+const int powerpin  = 14; // analog input pin 5 -- voltage
+const int groundpin = 16; // analog input pin 4 -- ground
+const int xPin      = A5; // x-axis of the accelerometer
+const int yPin      = A4; // y-axis
+const int zPin      = A3; // z-axis (only on 3-axis models)
 
+const int sampleSize = 10; // Take multiple samples to reduce noise
+
+/* ROLLING AVERERAGE VARS
+   ----------------------------------------------------------*/
+
+int    raLen = 5;  // Running Average Length -- the number of passes used
+                   // to create the running average.
+                   
+double rollBin[10] = {0.0};
+int    rollInc = 0;
+double pitchBin[10] = {0.0};
+int    pitchInc = 0;
 
 /* CALIBRATION VARS
   ----------------------------------------------------------*/
@@ -56,6 +66,12 @@ int yLow  = 1023;
 int zHigh = 0;
 int zLow  = 1023;
 
+double xRawMin = 268;
+double xRawMax = 397;
+double yRawMin = 262;
+double yRawMax = 399;
+double zRawMin = 277;
+double zRawMax = 410;
 
 /* ORB MODES
   ----------------------------------------------------------*/
@@ -124,22 +140,27 @@ void setup() {
 
 void loop() {
 
-  if(calibrateX || calibrateY || calibrateZ) {
-    calibrate();
-  } else {
-    playTrack(getTrackNumber());
-  }
-  delay(100); //adc recover
+  // if(calibrateX || calibrateY || calibrateZ) {
+  //   calibrate();
+  // } else {
+  //   playTrack(getTrackNumber());
+  // }
+
+  getPitchAndRoll();
+
+  delay(10); //adc recover
 }
 
 void getPitchAndRoll() {
   
   //note: roll becomes unreliable when pitch is within 5deg of zenith
   
+  float alpha = 0.5;
+
   //get raw accelerometer reading
-  int xRaw = ReadAxis(xInput);
-  int yRaw = ReadAxis(yInput);
-  int zRaw = ReadAxis(zInput);
+  int xRaw = ReadAxis(xPin);
+  int yRaw = ReadAxis(yPin);
+  int zRaw = ReadAxis(zPin);
 
   //convert raw values to 'milli-Gs"
   long xScaled = map(xRaw, xRawMin, xRawMax, -1000, 1000);
@@ -160,11 +181,43 @@ void getPitchAndRoll() {
   double roll  = (atan2(-fYg, fZg)*180.0)/M_PI;
   double pitch = (atan2(fXg, sqrt(fYg*fYg + fZg*fZg))*180.0)/M_PI;
 
-  Serial.print(pitch);
-  Serial.print(":");
-  Serial.println(roll);
+  rollBin[rollInc] = roll;
+  double rollOutput = 0;
+  for (int i=0; i < raLen; i++)
+    {
+      rollOutput=rollOutput+rollBin[i];
+    }
+  rollOutput = rollOutput / raLen;
+  rollInc++;
+  rollInc = rollInc % raLen;
 
-  delay(10);
+  pitchBin[pitchInc] = pitch;
+  double pitchOutput = 0;
+  for (int i=0; i < raLen; i++)
+    {
+      pitchOutput=pitchOutput+pitchBin[i];
+    }
+  pitchOutput=pitchOutput / raLen;
+  pitchInc++;
+  pitchInc = pitchInc % raLen;
+
+  Serial.print(pitchOutput);
+  Serial.print(":");
+  Serial.println(rollOutput);
+
+}
+
+// Read "sampleSize" samples and report the average
+//
+int ReadAxis(int axisPin) {
+  long reading = 0;
+  analogRead(axisPin);
+  delay(1);
+  for (int i = 0; i < sampleSize; i++)
+  {
+    reading += analogRead(axisPin);
+  }
+  return reading/sampleSize;
 }
 
 void playTrack(int trackNo) {
@@ -215,7 +268,7 @@ int getTrackNumber() {
   int p = 0;
 
   //X Value
-  int x = analogRead(xpin);
+  int x = analogRead(xPin);
 
   if(x <= 440) {
     p=0;
@@ -228,7 +281,7 @@ int getTrackNumber() {
   }
 
   //Y Value
-  int y = analogRead(ypin);
+  int y = analogRead(yPin);
 
   if(y <= 435) {
     p=p+0;
@@ -241,7 +294,7 @@ int getTrackNumber() {
   }
 
     //Z Value
-  int z = analogRead(zpin);
+  int z = analogRead(zPin);
 
   if(z <= 420) {
     p=p+0;
@@ -267,7 +320,7 @@ void calibrate() {
 
   if(calibrateX) {
     
-    int x = analogRead(xpin);
+    int x = analogRead(xPin);
 
     delay(100);
 
@@ -283,12 +336,12 @@ void calibrate() {
     Serial.print(F("\t Highest X => "));
     Serial.print(xHigh);
     Serial.print(F("\t Acctual X => "));
-    Serial.print(analogRead(xpin));
+    Serial.print(analogRead(xPin));
     Serial.println("");
 
   } else if (calibrateY) {
     
-    int y = analogRead(ypin);
+    int y = analogRead(yPin);
 
     delay(100);
 
@@ -304,12 +357,12 @@ void calibrate() {
     Serial.print(F("\t Highest Y => "));
     Serial.print(yHigh);
     Serial.print(F("\t Acctual Y => "));
-    Serial.print(analogRead(ypin));
+    Serial.print(analogRead(yPin));
     Serial.println("");
 
   } else if (calibrateZ) {
 
-    int z = analogRead(zpin);
+    int z = analogRead(zPin);
 
     delay(100);
 
@@ -325,7 +378,7 @@ void calibrate() {
     Serial.print(F("\t Highest Z => "));
     Serial.print(zHigh);
     Serial.print(F("\t Acctual Z => "));
-    Serial.print(analogRead(zpin));
+    Serial.print(analogRead(zPin));
     Serial.println("");
   }
 }

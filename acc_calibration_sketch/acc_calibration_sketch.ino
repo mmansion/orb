@@ -1,89 +1,170 @@
 /*
 * Accelerometer calibration sketch
 * Author: Bill Earl
+* Modified by: Mikhail Mansion, June 12, 2013
 * Ref: http://learn.adafruit.com/adafruit-analog-accelerometer-breakouts/programming
 *
 */
 
-const int xInput = A0;
-const int yInput = A1;
-const int zInput = A2;
-const int buttonPin = 2;
+/* ACCELEROMETER PINS
+  ----------------------------------------------------------*/
+const int powerpin  = 14; // analog input pin 5 -- voltage
+const int groundpin = 16; // analog input pin 4 -- ground
+const int xPin = A5;      // x-axis of the accelerometer
+const int yPin = A4;      // y-axis
+const int zPin = A3;      // z-axis (only on 3-axis models)
+
+const int buttonPin = 10;
 
 // Raw Ranges:
-// initialize to mid-range and allow calibration to
-// find the minimum and maximum for each axis
-int xRawMin = 512;
-int xRawMax = 512;
+int xRawMin, xRawMax, xRawCen, yRawMin, yRawMax, yRawCen, zRawMin, zRawMax, zRawCen;
 
-int yRawMin = 512;
-int yRawMax = 512;
 
-int zRawMin = 512;
-int zRawMax = 512;
+boolean startOver = false;
 
 // Take multiple samples to reduce noise
 const int sampleSize = 10;
 
-void setup() 
-{
-  analogReference(EXTERNAL);
-  Serial.begin(9600);
+void setup() {
+  //analogReference(EXTERNAL); if using aref
+  Serial.begin(115200);
+
+  //calibration pin
+  digitalWrite(buttonPin, HIGH);
+  pinMode(buttonPin, INPUT);
+
+   //setup pins for accelerometer
+  pinMode(groundpin, OUTPUT);
+  pinMode(powerpin, OUTPUT);
+  digitalWrite(groundpin, LOW); 
+  digitalWrite(powerpin, HIGH);
 }
 
-void loop() 
-{
-  int xRaw = ReadAxis(xInput);
-  int yRaw = ReadAxis(yInput);
-  int zRaw = ReadAxis(zInput);
+void loop() {
+
+  if (digitalRead(buttonPin) == LOW) { //ENTER CALIBRATION MODE
+
+    startOver = false;
+    Serial.println("");
+    Serial.print(F("ENTERING CALIBRATION MODE"));
+    delay(1000);
+    Serial.print(F(" ."));
+    delay(200);
+    Serial.print(F(" ."));
+    delay(200);
+    Serial.print(F(" ."));
+    delay(200);
+    Serial.println("");
+
+    /* CALIBRATE THE X AXIS
+      ----------------------------------------------------------*/
+
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT CENTER X, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+
+      while(Serial.available() < 1) { /*hold until user sends a byte or starts over*/ }
+      if(Serial.read() == 'r' && !startOver) startOver = true;
+      xRawCen = ReadAxis(xPin); 
+    }
+    
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MIN X, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      xRawMin = ReadAxis(xPin);
+    }
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MAX X, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      xRawMax = ReadAxis(xPin);
+    }
+
+    /* CALIBRATE THE X AXIS
+      ----------------------------------------------------------*/
+
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT CENTER Y, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte or starts over*/ }
+      if(Serial.read() == 'r') startOver = true;
+      yRawCen = ReadAxis(yPin); 
+    }
+    
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MIN Y, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      yRawMin = ReadAxis(yPin);
+    }
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MAX Y, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      yRawMax = ReadAxis(yPin);
+    }
+
+    /* CALIBRATE THE Z AXIS
+      ----------------------------------------------------------*/
+
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT CENTER Z, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte or starts over*/ }
+      if(Serial.read() == 'r') startOver = true;
+      zRawCen = ReadAxis(zPin); 
+    }
+    
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MIN Z, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      zRawMin = ReadAxis(zPin);
+    }
+    if(!startOver) {
+      Serial.print(F("PLACE UNIT AT MAX Z, ENTER 'c' TO CONTINUE, ENTER 'r' TO RESET"));
+      while(Serial.available() < 1 && !startOver) { /*hold until user sends a byte*/ }
+      if(Serial.read() == 'r') startOver = true;
+      zRawMax = ReadAxis(zPin);
+    }
+
+     /* PRINT RESULTS
+      ----------------------------------------------------------*/
   
-  if (digitalRead(buttonPin) == LOW)
-  {
-    AutoCalibrate(xRaw, yRaw, zRaw);
-  }
-  else
-  {
-    Serial.print("Raw Ranges: X: ");
+    Serial.print("X CEN: ");
+    Serial.print(xRawCen);
+    Serial.print("X MIN: ");
     Serial.print(xRawMin);
-    Serial.print("-");
+    Serial.print("X MAX: ");
     Serial.print(xRawMax);
-    
-    Serial.print(", Y: ");
+    Serial.println("");
+
+    Serial.print("Y CEN: ");
+    Serial.print(yRawCen);
+    Serial.print("Y MIN: ");
     Serial.print(yRawMin);
-    Serial.print("-");
+    Serial.print("Y MAX: ");
     Serial.print(yRawMax);
-    
-    Serial.print(", Z: ");
+    Serial.println("");
+
+    Serial.print("Z CEN: ");
+    Serial.print(zRawCen);
+    Serial.print("Z MIN: ");
     Serial.print(zRawMin);
-    Serial.print("-");
+    Serial.print("Z MAX: ");
     Serial.print(zRawMax);
-    Serial.println();
-    Serial.print(xRaw);
-    Serial.print(", ");
-    Serial.print(yRaw);
-    Serial.print(", ");
-    Serial.print(zRaw);
-    
-    // Convert raw values to 'milli-Gs"
-    long xScaled = map(xRaw, xRawMin, xRawMax, -1000, 1000);
-    long yScaled = map(yRaw, yRawMin, yRawMax, -1000, 1000);
-    long zScaled = map(zRaw, zRawMin, zRawMax, -1000, 1000);
-  
-    // re-scale to fractional Gs
-    float xAccel = xScaled / 1000.0;
-    float yAccel = yScaled / 1000.0;
-    float zAccel = zScaled / 1000.0;
-  
-    Serial.print(" :: ");
-    Serial.print(xAccel);
-    Serial.print("G, ");
-    Serial.print(yAccel);
-    Serial.print("G, ");
-    Serial.print(zAccel);
-    Serial.println("G");
-  
-  delay(500);
+    Serial.println("");
+
+  } else {
+
+    Serial.print("X => ");
+    Serial.print(analogRead(xPin));
+    Serial.print("\t Y => ");
+    Serial.print(analogRead(yPin));
+    Serial.print("\t Z => ");
+    Serial.println(analogRead(zPin));
+
   }
+
+  delay(100);
 }
 
 //
