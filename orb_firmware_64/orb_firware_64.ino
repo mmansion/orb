@@ -48,11 +48,15 @@ const int sampleSize = 10; // Take multiple samples to reduce noise
 
 int    raLen = 5;  // Running Average Length -- the number of passes used
                    // to create the running average.
-                   
+
 double rollBin[10] = {0.0};
+double rollFinal = 0;
 int    rollInc = 0;
 double pitchBin[10] = {0.0};
+double pitchFinal = 0;
 int    pitchInc = 0;
+
+
 
 /* CALIBRATION VARS
   ----------------------------------------------------------*/
@@ -147,6 +151,7 @@ void loop() {
   // }
 
   getPitchAndRoll();
+  getTrackNumber();
 
   delay(10); //adc recover
 }
@@ -182,28 +187,28 @@ void getPitchAndRoll() {
   double pitch = (atan2(fXg, sqrt(fYg*fYg + fZg*fZg))*180.0)/M_PI;
 
   rollBin[rollInc] = roll;
-  double rollOutput = 0;
+  rollFinal = 0;
   for (int i=0; i < raLen; i++)
     {
-      rollOutput=rollOutput+rollBin[i];
+      rollFinal=rollFinal+rollBin[i];
     }
-  rollOutput = rollOutput / raLen;
+  rollFinal = rollFinal / raLen;
   rollInc++;
   rollInc = rollInc % raLen;
 
   pitchBin[pitchInc] = pitch;
-  double pitchOutput = 0;
+  pitchFinal = 0;
   for (int i=0; i < raLen; i++)
     {
-      pitchOutput=pitchOutput+pitchBin[i];
+      pitchFinal = pitchFinal+pitchBin[i];
     }
-  pitchOutput=pitchOutput / raLen;
+  pitchFinal = pitchFinal / raLen;
   pitchInc++;
   pitchInc = pitchInc % raLen;
 
-  Serial.print(pitchOutput);
-  Serial.print(":");
-  Serial.println(rollOutput);
+//  Serial.print(pitchOutput);
+//  Serial.print(":");
+//  Serial.println(rollOutput);
 
 }
 
@@ -265,50 +270,28 @@ String getTrackName(int trackNo) { //get track file names from track number
 
 int getTrackNumber() {
 
-  int p = 0;
+  int r = 0; int q = 0; int p = 0;
+   if (pitchFinal < -80 || pitchFinal > 80) 
+    {
+      r = -1;
+    }
+    else
+    {
+      p = (pitchFinal + 80) / 20;
+      q = ((rollFinal + 180) / 45);
+      r = p + (q * 8);
+    }
 
-  //X Value
-  int x = analogRead(xPin);
+r = r + 1;  // output range is now 0-64! Kickass.
 
-  if(x <= 440) {
-    p=0;
-  } else if(x > 440 && x <= 520) {
-    p=1;
-  } else if(x > 520 && x <= 595) {
-    p=2;
-  } else {
-    p=3;
-  }
+      Serial.print(p);
+      Serial.print("\t");
+      Serial.print(q);
+      Serial.print("\t");
+      Serial.print(r);
+      Serial.print("\n");
 
-  //Y Value
-  int y = analogRead(yPin);
-
-  if(y <= 435) {
-    p=p+0;
-  } else if(y > 435 && y <= 520) {
-    p=p+4;
-  } else if(y > 520 && y <= 605) {
-    p=p+8;
-  } else {
-    p=p+12;
-  }
-
-    //Z Value
-  int z = analogRead(zPin);
-
-  if(z <= 420) {
-    p=p+0;
-  } else if(z > 420 && z <= 488) {
-    p=p+16;
-  } else if(z > 488 && z <= 558) {
-    p=p+32;
-  } else {
-    p=p+48;
-  }
-
-p=p+1;  // output range is now 1-64! Kickass.
-
-  return p;
+  return r;
 
 }
 
